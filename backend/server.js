@@ -13,6 +13,18 @@ app.use(express.json());
 const itemsRouter = require('./routes/items');
 app.use('/api/items', itemsRouter);
 
+// Import the calculate route
+const calculateRouter = require('./routes/calculate');
+
+// Add the calculate route
+app.use('/api/calculate', calculateRouter);
+
+// Import the history route
+const historyRouter = require('./routes/history');
+
+// Add the history route
+app.use('/api/history', historyRouter);
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, { 
   useNewUrlParser: true, 
