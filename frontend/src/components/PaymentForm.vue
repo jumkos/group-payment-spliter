@@ -1,34 +1,34 @@
 <template>
   <div class="form-container">
-    <h2 class="form-title">Payment Splitter</h2>
+    <h2 class="form-title">{{ t('title') }}</h2>
     <form @submit.prevent="validateAndSubmit" class="form">
       <div v-for="(person, index) in people" :key="index" class="form-row">
         <div class="input-group">
           <input 
             v-model="person.name" 
-            placeholder="Name" 
+            :placeholder="t('name')" 
             required 
             class="input"
             :class="{ 'error': errors[`people.${index}.name`] }"
           />
           <span class="error-message" v-if="errors[`people.${index}.name`]">
-            {{ errors[`people.${index}.name`] }}
+            {{ t('nameRequired') }}
           </span>
         </div>
         <div class="input-group">
           <input 
             :value="formatInput(person.amount)"
-            placeholder="Order Amount"
+            :placeholder="t('orderAmount')"
             required 
             class="input"
             :class="{ 'error': errors[`people.${index}.amount`] }"
             @input="handleAmountInput($event, index)"
           />
           <span class="error-message" v-if="errors[`people.${index}.amount`]">
-            {{ errors[`people.${index}.amount`] }}
+            {{ t(errors[`people.${index}.amount`]) }}
           </span>
         </div>
-        <button type="button" @click="removePerson(index)" class="button button-remove">Remove</button>
+        <button type="button" @click="removePerson(index)" class="button button-remove">{{ t('remove') }}</button>
         <template v-if="index === people.length - 1">
           <button type="button" @click="addPerson" class="button button-add">+</button>
         </template>
@@ -37,42 +37,42 @@
         <div class="input-group">
           <input 
             :value="formatInput(deliveryFee)"
-            placeholder="Delivery Fee"
+            :placeholder="t('deliveryFee')"
             class="input"
             :class="{ 'error': errors.deliveryFee }"
             @input="handleDeliveryFeeInput"
           />
-          <span class="error-message" v-if="errors.deliveryFee">{{ errors.deliveryFee }}</span>
+          <span class="error-message" v-if="errors.deliveryFee">{{ t('deliveryFeeNegative') }}</span>
         </div>
         <div class="input-group">
           <input 
             :value="formatInput(discount)"
-            placeholder="Discount"
+            :placeholder="t('discount')"
             class="input"
             :class="{ 'error': errors.discount }"
             @input="handleDiscountInput"
           />
-          <span class="error-message" v-if="errors.discount">{{ errors.discount }}</span>
+          <span class="error-message" v-if="errors.discount">{{ t(errors.discount) }}</span>
         </div>
       </div>
       <div class="button-group">
-        <button type="button" @click="clearForm" class="button button-clear">Clear</button>
-        <button type="submit" class="button button-submit">Calculate</button>
+        <button type="button" @click="clearForm" class="button button-clear">{{ t('clear') }}</button>
+        <button type="submit" class="button button-submit">{{ t('calculate') }}</button>
       </div>
     </form>
 
     <div v-if="results.length" class="results">
-      <h3 class="results-title">Results</h3>
-      <p>Subtotal: {{ formatCurrency(totalBefore) }}</p>
-      <p>Final Total: {{ formatCurrency(totalAfter) }}</p>
-      <p>Total to Delivery Service: {{ formatCurrency(totalToDeliveryService) }}</p>
+      <h3 class="results-title">{{ t('results') }}</h3>
+      <p>{{ t('subtotal') }}: {{ formatCurrency(totalBefore) }}</p>
+      <p>{{ t('finalTotal') }}: {{ formatCurrency(totalAfter) }}</p>
+      <p>{{ t('totalDelivery') }}: {{ formatCurrency(totalToDeliveryService) }}</p>
       <table class="results-table">
         <thead>
           <tr>
-            <th>Person</th>
-            <th>Order Amount</th>
-            <th>Discount Share</th>
-            <th>Final Owed</th>
+            <th>{{ t('person') }}</th>
+            <th>{{ t('orderAmount') }}</th>
+            <th>{{ t('discountShare') }}</th>
+            <th>{{ t('finalOwed') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -87,12 +87,12 @@
       
       <div class="button-group mt-4">
         <button @click="handleDone" class="button button-done">
-          Done
+          {{ t('done') }}
         </button>
       </div>
     </div>
     <div v-if="showSuccessMessage" class="success-message">
-      Calculation saved successfully!
+      {{ t('savedSuccess') }}
     </div>
   </div>
 </template>
@@ -100,8 +100,13 @@
 <script>
 import axios from 'axios';
 import { formatCurrency, formatInput, parseCurrencyInput } from '../utils/currency';
+import { inject } from 'vue';
 
 export default {
+  setup() {
+    const t = inject('t');
+    return { t };
+  },
   data() {
     return {
       people: [{ name: '', amount: null }],
@@ -151,31 +156,31 @@ export default {
       // Validate people
       this.people.forEach((person, index) => {
         if (!person.name.trim()) {
-          this.errors[`people.${index}.name`] = 'Name is required';
+          this.errors[`people.${index}.name`] = 'nameRequired';
           isValid = false;
         }
         if (!person.amount) {
-          this.errors[`people.${index}.amount`] = 'Amount is required';
+          this.errors[`people.${index}.amount`] = 'amountRequired';
           isValid = false;
         } else if (person.amount <= 0) {
-          this.errors[`people.${index}.amount`] = 'Amount must be greater than 0';
+          this.errors[`people.${index}.amount`] = 'amountGreaterThanZero';
           isValid = false;
         }
       });
 
       // Validate delivery fee
       if (this.deliveryFee < 0) {
-        this.errors.deliveryFee = 'Delivery fee cannot be negative';
+        this.errors.deliveryFee = 'deliveryFeeNegative';
         isValid = false;
       }
 
       // Validate discount
       if (this.discount < 0) {
-        this.errors.discount = 'Discount cannot be negative';
+        this.errors.discount = 'discountNegative';
         isValid = false;
       }
       if (this.discount > this.subtotal) {
-        this.errors.discount = 'Discount cannot be greater than subtotal';
+        this.errors.discount = 'discountGreaterThanSubtotal';
         isValid = false;
       }
 

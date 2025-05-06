@@ -1,120 +1,147 @@
 <template>
   <div class="form-container">
-    <h2 class="form-title">Order History</h2>
+    <!-- Header section -->
+    <div class="header-section">
+      <h2 class="form-title">{{ t('orderHistory') }}</h2>
+      <button 
+        v-if="history.length > 0" 
+        @click="showClearModal = true" 
+        class="button button-danger"
+      >
+        {{ t('clearHistory') }}
+      </button>
+    </div>
+
+    <!-- Filter toggle button (visible on mobile) -->
+    <button 
+      @click="toggleFilters" 
+      class="button button-secondary filter-toggle"
+      :class="{ 'active': showFilters }"
+    >
+      <span>{{ showFilters ? t('hideFilters') : t('showFilters') }}</span>
+      <svg 
+        class="icon" 
+        :class="{ 'rotated': showFilters }"
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
     
-    <!-- Filters -->
-    <div class="filters">
-      <div class="input-group">
-        <label class="input-label">Search by name</label>
-        <input
-          v-model="filters.name"
-          placeholder="Enter name"
-          class="input"
-          @input="handleNameInput"
-        />
-      </div>
-      <div class="input-group">
-        <label class="input-label">Start Date</label>
-        <input
-          type="date"
-          v-model="filters.startDate"
-          class="input"
-          @change="handleDateChange"
-        />
-      </div>
-      <div class="input-group">
-        <label class="input-label">End Date</label>
-        <input
-          type="date"
-          v-model="filters.endDate"
-          class="input"
-          @change="handleDateChange"
-        />
-      </div>
-      <select v-model="sortBy" class="input">
-        <option value="createdAt">Date</option>
-        <option value="subtotal">Total Amount</option>
-      </select>
-      <select v-model="sortOrder" class="input">
-        <option value="desc">Newest First</option>
-        <option value="asc">Oldest First</option>
-      </select>
-      <div class="clear-history">
-        <button 
-          v-if="history.length > 0" 
-          @click="showClearModal = true" 
-          class="button button-danger"
-        >
-          Clear History
-        </button>
+    <!-- Filters Section -->
+    <div class="filters-wrapper" :class="{ 'expanded': showFilters }">
+      <div class="filters">
+        <div class="input-group">
+          <label class="input-label">{{ t('searchByName') }}</label>
+          <input
+            v-model="filters.name"
+            :placeholder="t('searchByName')"
+            class="input"
+            @input="handleNameInput"
+          />
+        </div>
+        <div class="dates-group">
+          <div class="input-group">
+            <label class="input-label">{{ t('startDate') }}</label>
+            <input
+              type="date"
+              v-model="filters.startDate"
+              class="input"
+              @change="handleDateChange"
+            />
+          </div>
+          <div class="input-group">
+            <label class="input-label">{{ t('endDate') }}</label>
+            <input
+              type="date"
+              v-model="filters.endDate"
+              class="input"
+              @change="handleDateChange"
+            />
+          </div>
+        </div>
+        <div class="sort-group">
+          <select v-model="sortBy" class="input">
+            <option value="createdAt">{{ t('date') }}</option>
+            <option value="subtotal">{{ t('subtotal') }}</option>
+          </select>
+          <select v-model="sortOrder" class="input">
+            <option value="desc">{{ t('newestFirst') }}</option>
+            <option value="asc">{{ t('oldestFirst') }}</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <!-- History Table -->
-    <div class="results" v-if="history.length">
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>People</th>
-            <th>Subtotal</th>
-            <th>Delivery Fee</th>
-            <th>Total Discount</th>
-            <th>Final Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="order in history" :key="order._id">
-            <td>{{ formatDate(order.createdAt) }}</td>
-            <td>
-              <ul class="order-people">
-                <li v-for="person in order.orders" :key="person.name">
-                  {{ person.name }}: {{ formatCurrency(person.finalOwed) }}
-                </li>
-              </ul>
-            </td>
-            <td>{{ formatCurrency(order.subtotal) }}</td>
-            <td>{{ formatCurrency(order.deliveryFee) }}</td>
-            <td>{{ formatCurrency(order.totalDiscount) }}</td>
-            <td>{{ formatCurrency(calculateFinalTotal(order)) }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Results Table -->
+    <div class="table-wrapper">
+      <div class="results" v-if="history.length">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>{{ t('date') }}</th>
+              <th>{{ t('person') }}</th>
+              <th>{{ t('subtotal') }}</th>
+              <th>{{ t('deliveryFee') }}</th>
+              <th>{{ t('discount') }}</th>
+              <th>{{ t('finalTotal') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="order in history" :key="order._id">
+              <td>{{ formatDate(order.createdAt) }}</td>
+              <td>
+                <ul class="order-people">
+                  <li v-for="person in order.orders" :key="person.name">
+                    {{ person.name }}: {{ formatCurrency(person.finalOwed) }}
+                  </li>
+                </ul>
+              </td>
+              <td>{{ formatCurrency(order.subtotal) }}</td>
+              <td>{{ formatCurrency(order.deliveryFee) }}</td>
+              <td>{{ formatCurrency(order.totalDiscount) }}</td>
+              <td>{{ formatCurrency(calculateFinalTotal(order)) }}</td>
+            </tr>
+          </tbody>
+        </table>
 
-      <!-- Pagination -->
-      <div class="pagination">
-        <button 
-          class="button"
-          :disabled="currentPage === 1"
-          @click="changePage(currentPage - 1)"
-        >
-          Previous
-        </button>
-        <span class="page-info">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        <button 
-          class="button"
-          :disabled="currentPage === totalPages"
-          @click="changePage(currentPage + 1)"
-        >
-          Next
-        </button>
+        <!-- Pagination -->
+        <div class="pagination">
+          <button 
+            class="button"
+            :disabled="currentPage === 1"
+            @click="changePage(currentPage - 1)"
+          >
+            {{ t('previous') }}
+          </button>
+          <span class="page-info">
+            {{ t('page') }} {{ currentPage }} {{ t('of') }} {{ totalPages }}
+          </span>
+          <button 
+            class="button"
+            :disabled="currentPage === totalPages"
+            @click="changePage(currentPage + 1)"
+          >
+            {{ t('next') }}
+          </button>
+        </div>
       </div>
-    </div>
-    <div v-else class="no-results">
-      No orders found
+      <div v-else class="no-results">
+        {{ t('noOrders') }}
+      </div>
     </div>
 
     <!-- Clear History Modal -->
     <div v-if="showClearModal" class="modal-overlay" @click="cancelClear">
       <div class="modal-content" @click.stop>
-        <h3 class="modal-title">Clear History</h3>
-        <p class="modal-text">Type 'clear' to confirm deletion of all history.</p>
+        <h3 class="modal-title">{{ t('clearHistory') }}</h3>
+        <p class="modal-text">{{ t('clearConfirmation') }}</p>
         <div class="modal-body">
           <input
             v-model="clearConfirmText"
-            placeholder="Type 'clear' to confirm"
+            :placeholder="t('clearConfirmation')"
             class="input"
             @keyup.enter="clearConfirmText === 'clear' && clearHistory()"
             @keyup.esc="cancelClear"
@@ -126,13 +153,13 @@
             :disabled="clearConfirmText !== 'clear'"
             class="button button-danger"
           >
-            Confirm Clear
+            {{ t('confirmClear') }}
           </button>
           <button 
             @click="cancelClear" 
             class="button button-secondary"
           >
-            Cancel
+            {{ t('cancel') }}
           </button>
         </div>
       </div>
@@ -140,7 +167,7 @@
 
     <!-- Success Message -->
     <div v-if="showSuccessMessage" class="success-message">
-      History cleared successfully!
+      {{ t('clearedSuccess') }}
     </div>
   </div>
 </template>
@@ -148,8 +175,13 @@
 <script>
 import axios from 'axios';
 import { formatCurrency } from '../utils/currency';
+import { inject } from 'vue';
 
 export default {
+  setup() {
+    const t = inject('t');
+    return { t };
+  },
   data() {
     return {
       history: [],
@@ -164,7 +196,8 @@ export default {
       },
       showClearModal: false,
       clearConfirmText: '',
-      showSuccessMessage: false
+      showSuccessMessage: false,
+      showFilters: false
     };
   },
   methods: {
@@ -230,6 +263,9 @@ export default {
     cancelClear() {
       this.showClearModal = false;
       this.clearConfirmText = '';
+    },
+    toggleFilters() {
+      this.showFilters = !this.showFilters;
     }
   },
   watch: {
@@ -419,5 +455,130 @@ export default {
 
 .modal-content {
   animation: modalFadeIn 0.3s ease-out;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.filter-toggle {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--form-bg, #f8f9fa);
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+.filter-toggle .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  transition: transform 0.3s ease;
+}
+
+.filter-toggle .icon.rotated {
+  transform: rotate(180deg);
+}
+
+.filters-wrapper {
+  transition: max-height 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+.dates-group {
+  display: flex;
+  gap: 1rem;
+  flex: 2;
+}
+
+.sort-group {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 1rem;
+}
+
+.clear-history-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin: 1rem 0;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .filter-toggle {
+    display: flex;
+  }
+
+  .filters-wrapper {
+    max-height: 0;
+  }
+
+  .filters-wrapper.expanded {
+    max-height: 500px;
+  }
+
+  .filters {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--form-bg, #f8f9fa);
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 5px;
+  }
+
+  .dates-group {
+    flex-direction: column;
+  }
+
+  .sort-group {
+    flex-direction: column;
+  }
+
+  .input-group {
+    width: 100%;
+  }
+
+  .results-table {
+    font-size: 0.875rem;
+  }
+
+  .header-actions {
+    gap: 0.5rem;
+  }
+  
+  .header-actions .button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Dark mode adjustments */
+.dark .filters {
+  background-color: var(--form-bg, #1a202c);
+  border-color: var(--border-color, #4a5568);
+}
+
+.dark .filter-toggle {
+  background-color: var(--form-bg, #1a202c);
+  border-color: var(--border-color, #4a5568);
 }
 </style>
