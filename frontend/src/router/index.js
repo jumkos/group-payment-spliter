@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 import ShareView from '../views/ShareView.vue';
+import HistoryView from '../views/HistoryView.vue';
 
 const routes = [
   {
@@ -13,6 +14,11 @@ const routes = [
     name: 'Share',
     component: ShareView,
     props: true
+  },
+  {
+    path: '/history',
+    name: 'History',
+    component: HistoryView
   }
 ];
 

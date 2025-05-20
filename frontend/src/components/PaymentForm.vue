@@ -167,11 +167,13 @@
 import { formatCurrency, formatInput, parseCurrencyInput } from '../utils/currency';
 import axios from 'axios';
 import { inject } from 'vue';
+import { useRouter } from 'vue-router';
 
 export default {
   setup() {
     const t = inject('t');
-    return { t };
+    const router = useRouter();
+    return { t, router };
   },
 
   data() {
@@ -284,6 +286,8 @@ export default {
     async saveToHistory() {
       // The order is already saved when calculated
       this.resetForm();
+      // Navigate to history page
+      this.router.push('/history');
     },
 
     shareResult() {

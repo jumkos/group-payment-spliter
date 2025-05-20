@@ -1,8 +1,10 @@
 <template>
     <div :class="{ dark: isDarkMode }" class="app-container">
         <header class="app-header">
-            <h1>{{ t('title') }}</h1>
-            <div class="header-controls">
+            <h1>{{ t('title') }}</h1>            <div class="header-controls">
+                <router-link to="/history" class="nav-button">
+                    {{ t('orderHistory') }}
+                </router-link>
                 <select 
                     v-model="currentLang" 
                     class="lang-select"
@@ -20,31 +22,26 @@
                     </svg>
                 </button>
             </div>
-        </header>
-        <main>
-            <PaymentForm @history-updated="refreshHistory" />
-            <HistoryPage ref="historyPageRef" />
+        </header>        <main>
+            <PaymentForm />
         </main>
     </div>
 </template>
 
 <script>
 import PaymentForm from '../components/PaymentForm.vue';
-import HistoryPage from '../components/HistoryPage.vue';
 import { useI18n } from 'vue-i18n';
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted } from 'vue';
 
 export default {
   name: 'HomeView',
   components: {
-    PaymentForm,
-    HistoryPage
+    PaymentForm
   },
   setup() {
     const { t } = useI18n();
     const currentLang = ref(localStorage.getItem('language') || 'en');
     const isDarkMode = ref(false);
-    const historyPageRef = ref(null);
 
     const toggleDarkMode = () => {
       isDarkMode.value = !isDarkMode.value;
@@ -59,15 +56,7 @@ export default {
         isDarkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches;
         localStorage.setItem('darkMode', isDarkMode.value);
       }
-    };
-
-    const refreshHistory = () => {
-      nextTick(() => {
-        historyPageRef.value?.fetchHistory();
-      });
-    };
-
-    onMounted(() => {
+    };    onMounted(() => {
       loadDarkModePreference();
       
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
@@ -78,13 +67,10 @@ export default {
       });
     });
     
-    return {
-      currentLang,
+    return {      currentLang,
       isDarkMode,
       t,
-      toggleDarkMode,
-      refreshHistory,
-      historyPageRef
+      toggleDarkMode
     };
   }
 };
@@ -92,7 +78,7 @@ export default {
 
 <style>
 .app-container {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI&" Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #333;
   background-color: #f8f9fa;
   min-height: 100vh;
@@ -150,6 +136,19 @@ export default {
   height: 24px;
 }
 
+.nav-button {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.nav-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 main {
   flex: 1;
   padding: 2rem;
@@ -187,6 +186,11 @@ main {
 
   .app-header h1 {
     font-size: 1.25rem;
+  }
+
+  .nav-button {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.875rem;
   }
 }
 </style>
