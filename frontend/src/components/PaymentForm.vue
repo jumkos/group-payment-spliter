@@ -130,10 +130,31 @@
         <button @click="saveToHistory" class="save-button">
           {{ t('save') }}
         </button>
+        <button @click="shareResult" class="share-button">
+          {{ t('share') }}
+        </button>
         <button @click="resetForm" class="reset-button">
           {{ t('cancel') }}
         </button>
       </div>
+
+      <!-- Share Link Modal -->
+      <div v-if="showShareModal" class="modal-overlay" @click="closeShareModal">
+        <div class="modal-content" @click.stop>
+          <h3>{{ t('shareResult') }}</h3>
+          <div class="share-url">
+            <input type="text" readonly :value="shareUrl" ref="shareUrlInput" />
+            <button @click="copyShareUrl" class="copy-button">
+              {{ t(urlCopied ? 'linkCopied' : 'copyLink') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="urlCopied" class="success-message">
+        {{ t('linkCopied') }}
+      </div>
+
     </div>
 
     <div v-if="error" class="error-message">
@@ -163,7 +184,10 @@ export default {
       results: null,
       error: null,
       isSubmitting: false,
-      orderId: null
+      orderId: null,
+      showShareModal: false,
+      shareUrl: '',
+      urlCopied: false
     };
   },
 
@@ -252,11 +276,40 @@ export default {
       this.results = null;
       this.error = null;
       this.orderId = null;
+      this.showShareModal = false;
+      this.shareUrl = '';
+      this.urlCopied = false;
     },
 
     async saveToHistory() {
       // The order is already saved when calculated
       this.resetForm();
+    },
+
+    shareResult() {
+      if (!this.orderId) return;
+      
+      const shareUrl = `${window.location.origin}/share/${this.orderId}`;
+      this.shareUrl = shareUrl;
+      this.showShareModal = true;
+    },
+
+    async copyShareUrl() {
+      try {
+        await navigator.clipboard.writeText(this.shareUrl);
+        this.urlCopied = true;
+        setTimeout(() => {
+          this.urlCopied = false;
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    },
+
+    closeShareModal() {
+      this.showShareModal = false;
+      this.shareUrl = '';
+      this.urlCopied = false;
     }
   }
 };
@@ -562,5 +615,52 @@ input[type="checkbox"]:not(:checked) + .payment-status {
     width: 100%;
     margin-top: 0.75rem;
   }
+}
+
+.share-button {
+  background: #6c757d;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.share-button:hover:not(:disabled) {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.share-url {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.share-url input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  background: var(--form-bg);
+  color: inherit;
+}
+
+.copy-button {
+  padding: 0.75rem 1.5rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.copy-button:hover {
+  background: #0056b3;
 }
 </style>

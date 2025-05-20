@@ -58,7 +58,23 @@ export const translations = {
     unpaid: 'Unpaid',
     totalPaid: 'Total Paid',
     remainingAmount: 'Remaining Amount',
-    paymentStatus: 'Payment Status'
+    paymentStatus: 'Payment Status',
+
+    // Share Feature
+    share: 'Share',
+    shareResult: 'Share Result',
+    copyLink: 'Copy Link',
+    linkCopied: 'Link copied to clipboard!',
+    sharedResult: 'Shared Result',
+    loadingResult: 'Loading result...',
+    resultNotFound: 'Result not found or has expired',
+    shareTitle: 'Split Payment Result',
+    shareDescription: 'View the split payment result',
+
+    // Navigation
+    backToHome: 'Back to Home',
+    lightMode: 'Switch to Light Mode',
+    darkMode: 'Switch to Dark Mode'
   },
   id: {
     // Form
@@ -119,6 +135,22 @@ export const translations = {
     unpaid: 'Belum Lunas',
     totalPaid: 'Total Dibayar',
     remainingAmount: 'Sisa Pembayaran',
-    paymentStatus: 'Status Pembayaran'
+    paymentStatus: 'Status Pembayaran',
+
+    // Share Feature
+    share: 'Bagikan',
+    shareResult: 'Bagikan Hasil',
+    copyLink: 'Salin Link',
+    linkCopied: 'Link telah disalin!',
+    sharedResult: 'Hasil Berbagi',
+    loadingResult: 'Memuat hasil...',
+    resultNotFound: 'Hasil tidak ditemukan atau telah kedaluwarsa',
+    shareTitle: 'Hasil Pembagian Pembayaran',
+    shareDescription: 'Lihat hasil pembagian pembayaran',
+
+    // Navigation
+    backToHome: 'Kembali ke Beranda',
+    lightMode: 'Beralih ke Mode Terang',
+    darkMode: 'Beralih ke Mode Gelap'
   }
 };

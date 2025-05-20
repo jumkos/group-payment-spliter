@@ -1,45 +1,13 @@
 <template>
-  <div :class="{ dark: isDarkMode }" class="app-container">
-    <header class="app-header">
-      <h1>{{ t('title') }}</h1>
-      <div class="header-controls">
-        <select 
-          v-model="currentLang" 
-          class="lang-select"
-          :title="currentLang === 'en' ? 'Change Language' : 'Ubah Bahasa'"
-        >
-          <option value="en">English</option>
-          <option value="id">Indonesia</option>
-        </select>
-        <button @click="toggleDarkMode" class="toggle-mode" :title="isDarkMode ? t('lightMode') : t('darkMode')">
-          <svg v-if="isDarkMode" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          <svg v-else class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-          </svg>
-        </button>
-      </div>
-    </header>
-    <main>
-      <PaymentForm @history-updated="refreshHistory" />
-      <HistoryPage ref="historyPage" />
-    </main>
-  </div>
+  <router-view />
 </template>
 
 <script>
-import PaymentForm from './components/PaymentForm.vue';
-import HistoryPage from './components/HistoryPage.vue';
 import { translations } from './utils/i18n';
 import { provide, ref } from 'vue';
 
 export default {
   name: 'App',
-  components: {
-    PaymentForm,
-    HistoryPage
-  },
   setup() {
     const currentLang = ref(localStorage.getItem('language') || 'en');
     const t = (key) => translations[currentLang.value][key] || key;
@@ -51,44 +19,6 @@ export default {
       currentLang,
       t
     };
-  },
-  data() {
-    return {
-      isDarkMode: false
-    };
-  },
-  methods: {
-    toggleDarkMode() {
-      this.isDarkMode = !this.isDarkMode;
-      localStorage.setItem('darkMode', this.isDarkMode);
-    },
-    loadDarkModePreference() {
-      const darkMode = localStorage.getItem('darkMode');
-      if (darkMode !== null) {
-        this.isDarkMode = darkMode === 'true';
-      } else {
-        this.isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        localStorage.setItem('darkMode', this.isDarkMode);
-      }
-    },
-    refreshHistory() {
-      this.$refs.historyPage.fetchHistory();
-    }
-  },
-  watch: {
-    currentLang(newLang) {
-      localStorage.setItem('language', newLang);
-    }
-  },
-  mounted() {
-    this.loadDarkModePreference();
-    
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-      if (localStorage.getItem('darkMode') === null) {
-        this.isDarkMode = e.matches;
-        localStorage.setItem('darkMode', this.isDarkMode);
-      }
-    });
   }
 };
 </script>
@@ -99,6 +29,78 @@ export default {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+:root {
+  --border-color: #dee2e6;
+  --form-bg: #ffffff;
+  --header-bg: #f8f9fa;
+}
+
+.dark {
+  --border-color: #4a5568;
+  --form-bg: #2d3748;
+  --header-bg: #1a202c;
+}
+
+/* Base styles */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--form-bg);
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 90%;
+  width: 500px;
+  color: inherit;
+}
+
+/* Success message styles */
+.success-message {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #28a745;
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease-out;
+  z-index: 1000;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Button styles */
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .app-container {
@@ -202,18 +204,6 @@ main {
 
 .dark .lang-select option {
   background-color: #2d3748;
-}
-
-:root {
-  --border-color: #dee2e6;
-  --form-bg: #ffffff;
-  --header-bg: #f8f9fa;
-}
-
-.dark {
-  --border-color: #4a5568;
-  --form-bg: #2d3748;
-  --header-bg: #1a202c;
 }
 
 /* Responsive styles */

@@ -92,4 +92,38 @@ router.patch('/:orderId/payment', async (req, res) => {
   }
 });
 
+// Get calculation result by ID
+router.get('/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: order._id,
+        orders: order.orders,
+        deliveryFee: order.deliveryFee,
+        totalDiscount: order.totalDiscount,
+        subtotal: order.subtotal,
+        totalPaid: order.getTotalPaid(),
+        remainingAmount: order.getRemainingAmount()
+      }
+    });
+  } catch (error) {
+    console.error('Get calculation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve calculation result'
+    });
+  }
+});
+
 module.exports = router;
