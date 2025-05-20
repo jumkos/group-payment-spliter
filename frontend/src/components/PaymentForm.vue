@@ -1,71 +1,91 @@
 <template>
-  <div class="form-container">
-    <h2 class="form-title">{{ t('title') }}</h2>
-    <form @submit.prevent="validateAndSubmit" class="form">
-      <div v-for="(person, index) in people" :key="index" class="form-row">
-        <div class="input-group">
+  <div class="payment-form">
+    <form @submit.prevent="calculateSplit">
+      <div class="people-inputs">
+        <div v-for="(person, index) in people" :key="index" class="person-row">
           <input 
-            v-model="person.name" 
-            :placeholder="t('name')" 
-            required 
-            class="input"
-            :class="{ 'error': errors[`people.${index}.name`] }"
+            v-model="person.name"
+            :placeholder="t('name')"
+            required
+            class="name-input"
           />
-          <span class="error-message" v-if="errors[`people.${index}.name`]">
-            {{ t('nameRequired') }}
-          </span>
-        </div>
-        <div class="input-group">
           <input 
-            :value="formatInput(person.amount)"
+            v-model="person.displayAmount"
+            type="text"
             :placeholder="t('orderAmount')"
-            required 
-            class="input"
-            :class="{ 'error': errors[`people.${index}.amount`] }"
+            required
+            class="amount-input"
             @input="handleAmountInput($event, index)"
           />
-          <span class="error-message" v-if="errors[`people.${index}.amount`]">
-            {{ t(errors[`people.${index}.amount`]) }}
-          </span>
+          <button 
+            type="button" 
+            @click="removePerson(index)"
+            class="remove-button"
+            :aria-label="t('remove')"
+          >
+            ✕
+          </button>
         </div>
-        <button type="button" @click="removePerson(index)" class="button button-remove">{{ t('remove') }}</button>
-        <template v-if="index === people.length - 1">
-          <button type="button" @click="addPerson" class="button button-add">+</button>
-        </template>
+        <button type="button" @click="addPerson" class="add-button">
+          {{ t('addPerson') }}
+        </button>
       </div>
-      <div class="form-group">
+
+      <div class="additional-inputs">
         <div class="input-group">
-          <input 
-            :value="formatInput(deliveryFee)"
-            :placeholder="t('deliveryFee')"
-            class="input"
-            :class="{ 'error': errors.deliveryFee }"
+          <label for="deliveryFee">{{ t('deliveryFee') }}</label>
+          <input
+            id="deliveryFee"
+            v-model="displayDeliveryFee"
+            type="text"
+            class="fee-input"
             @input="handleDeliveryFeeInput"
           />
-          <span class="error-message" v-if="errors.deliveryFee">{{ t('deliveryFeeNegative') }}</span>
         </div>
         <div class="input-group">
-          <input 
-            :value="formatInput(discount)"
-            :placeholder="t('discount')"
-            class="input"
-            :class="{ 'error': errors.discount }"
+          <label for="discount">{{ t('discount') }}</label>
+          <input
+            id="discount"
+            v-model="displayDiscount"
+            type="text"
+            class="discount-input"
             @input="handleDiscountInput"
           />
-          <span class="error-message" v-if="errors.discount">{{ t(errors.discount) }}</span>
         </div>
       </div>
-      <div class="button-group">
-        <button type="button" @click="clearForm" class="button button-clear">{{ t('clear') }}</button>
-        <button type="submit" class="button button-submit">{{ t('calculate') }}</button>
-      </div>
+
+      <button type="submit" class="calculate-button" :disabled="isSubmitting">
+        {{ t('calculate') }}
+      </button>
     </form>
 
-    <div v-if="results.length" class="results">
-      <h3 class="results-title">{{ t('results') }}</h3>
-      <p>{{ t('subtotal') }}: {{ formatCurrency(totalBefore) }}</p>
-      <p>{{ t('finalTotal') }}: {{ formatCurrency(totalAfter) }}</p>
-      <p>{{ t('totalDelivery') }}: {{ formatCurrency(totalToDeliveryService) }}</p>
+    <div v-if="results" class="results">
+      <div class="results-header">
+        <h3>{{ t('summary') }}</h3>
+        <div class="totals">
+          <div class="total-item">
+            <span>{{ t('subtotal') }}:</span>
+            <span>{{ formatCurrency(results.subtotal) }}</span>
+          </div>
+          <div class="total-item">
+            <span>{{ t('deliveryFee') }}:</span>
+            <span>{{ formatCurrency(results.deliveryFee) }}</span>
+          </div>
+          <div class="total-item">
+            <span>{{ t('totalDiscount') }}:</span>
+            <span>{{ formatCurrency(results.totalDiscount) }}</span>
+          </div>
+          <div class="total-item total-paid">
+            <span>{{ t('totalPaid') }}:</span>
+            <span>{{ formatCurrency(results.totalPaid) }}</span>
+          </div>
+          <div class="total-item remaining">
+            <span>{{ t('remainingAmount') }}:</span>
+            <span>{{ formatCurrency(results.remainingAmount) }}</span>
+          </div>
+        </div>
+      </div>
+
       <table class="results-table">
         <thead>
           <tr>
@@ -73,33 +93,58 @@
             <th>{{ t('orderAmount') }}</th>
             <th>{{ t('discountShare') }}</th>
             <th>{{ t('finalOwed') }}</th>
+            <th>{{ t('paymentStatus') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="result in results" :key="result.name" :class="{ highlight: result.discountShare === maxDiscount }">
-            <td>{{ result.name }}</td>
-            <td>{{ formatCurrency(result.amount) }}</td>
-            <td>{{ formatCurrency(result.discountShare) }}</td>
-            <td>{{ formatCurrency(result.finalOwed) }}</td>
+          <tr 
+            v-for="person in results.orders" 
+            :key="person.name"
+            :class="{ 
+              'highlight': person.discountShare === maxDiscountShare,
+              'paid': person.paid 
+            }"
+          >
+            <td>{{ person.name }}</td>
+            <td>{{ formatCurrency(person.amount) }}</td>
+            <td>{{ formatCurrency(person.discountShare) }}</td>
+            <td>{{ formatCurrency(person.finalOwed) }}</td>
+            <td>
+              <label :for="'paid-' + person.name" class="payment-toggle">
+                <input
+                  :id="'paid-' + person.name"
+                  type="checkbox"
+                  v-model="person.paid"
+                  @change="updatePaymentStatus(person)"
+                />
+                <span class="payment-status">
+                  {{ person.paid ? t('paid') : t('unpaid') }}
+                </span>
+              </label>
+            </td>
           </tr>
         </tbody>
       </table>
-      
-      <div class="button-group mt-4">
-        <button @click="handleDone" class="button button-done">
-          {{ t('done') }}
+
+      <div class="save-actions">
+        <button @click="saveToHistory" class="save-button">
+          {{ t('save') }}
+        </button>
+        <button @click="resetForm" class="reset-button">
+          {{ t('cancel') }}
         </button>
       </div>
     </div>
-    <div v-if="showSuccessMessage" class="success-message">
-      {{ t('savedSuccess') }}
+
+    <div v-if="error" class="error-message">
+      {{ error }}
     </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
 import { formatCurrency, formatInput, parseCurrencyInput } from '../utils/currency';
+import axios from 'axios';
 import { inject } from 'vue';
 
 export default {
@@ -107,365 +152,415 @@ export default {
     const t = inject('t');
     return { t };
   },
+
   data() {
     return {
-      people: [{ name: '', amount: null }],
-      deliveryFee: null,
-      discount: null,
-      results: [],
-      totalBefore: 0,
-      totalAfter: 0,
-      totalToDeliveryService: 0,
-      errors: {},
-      showSuccessMessage: false
+      people: [{ name: '', amount: null, displayAmount: '' }],
+      deliveryFee: 0,
+      displayDeliveryFee: '',
+      discount: 0,
+      displayDiscount: '',
+      results: null,
+      error: null,
+      isSubmitting: false,
+      orderId: null
     };
   },
+
   computed: {
-    maxDiscount() {
-      return Math.max(...this.results.map(r => r.discountShare), 0);
-    },
-    subtotal() {
-      return this.people.reduce((sum, person) => sum + (parseCurrencyInput(person.amount) || 0), 0);
+    maxDiscountShare() {
+      return this.results?.orders
+        ? Math.max(...this.results.orders.map(p => p.discountShare))
+        : 0;
     }
   },
+
   methods: {
     formatCurrency,
-    formatInput,
+    
     addPerson() {
-      this.people.push({ name: '', amount: null });
+      this.people.push({ name: '', amount: null, displayAmount: '' });
     },
+
     removePerson(index) {
       this.people.splice(index, 1);
-      if (this.people.length === 0) {
-        this.addPerson();
-      }
     },
+
     handleAmountInput(event, index) {
-      this.people[index].amount = parseCurrencyInput(event.target.value);
+      const formattedValue = formatInput(event.target.value);
+      this.people[index].displayAmount = formattedValue;
+      this.people[index].amount = parseCurrencyInput(formattedValue);
     },
+
     handleDeliveryFeeInput(event) {
-      this.deliveryFee = parseCurrencyInput(event.target.value);
+      const formattedValue = formatInput(event.target.value);
+      this.displayDeliveryFee = formattedValue;
+      this.deliveryFee = parseCurrencyInput(formattedValue);
     },
+
     handleDiscountInput(event) {
-      this.discount = parseCurrencyInput(event.target.value);
+      const formattedValue = formatInput(event.target.value);
+      this.displayDiscount = formattedValue;
+      this.discount = parseCurrencyInput(formattedValue);
     },
-    validateForm() {
-      this.errors = {};
-      let isValid = true;
 
-      // Validate people
-      this.people.forEach((person, index) => {
-        if (!person.name.trim()) {
-          this.errors[`people.${index}.name`] = 'nameRequired';
-          isValid = false;
-        }
-        if (!person.amount) {
-          this.errors[`people.${index}.amount`] = 'amountRequired';
-          isValid = false;
-        } else if (person.amount <= 0) {
-          this.errors[`people.${index}.amount`] = 'amountGreaterThanZero';
-          isValid = false;
-        }
-      });
-
-      // Validate delivery fee
-      if (this.deliveryFee < 0) {
-        this.errors.deliveryFee = 'deliveryFeeNegative';
-        isValid = false;
-      }
-
-      // Validate discount
-      if (this.discount < 0) {
-        this.errors.discount = 'discountNegative';
-        isValid = false;
-      }
-      if (this.discount > this.subtotal) {
-        this.errors.discount = 'discountGreaterThanSubtotal';
-        isValid = false;
-      }
-
-      return isValid;
-    },
-    async validateAndSubmit() {
-      if (!this.validateForm()) {
-        return;
-      }
+    async calculateSplit() {
+      this.error = null;
+      this.isSubmitting = true;
 
       try {
         const response = await axios.post('/api/calculate', {
-          people: this.people,
-          deliveryFee: this.deliveryFee || 0,
-          discount: this.discount || 0
+          orders: this.people,
+          deliveryFee: this.deliveryFee,
+          totalDiscount: this.discount
         });
-        this.results = response.data.results;
-        this.totalBefore = response.data.totalBefore;
-        this.totalAfter = response.data.totalAfter;
-        this.totalToDeliveryService = response.data.totalToDeliveryService;
+
+        this.results = response.data.data;
+        this.orderId = response.data.data.id;
       } catch (error) {
-        console.error('Error calculating split:', error);
+        this.error = error.response?.data?.error || 'Calculation failed';
+      } finally {
+        this.isSubmitting = false;
       }
     },
-    clearForm() {
-      this.people = [{ name: '', amount: null }];
-      this.deliveryFee = null;
-      this.discount = null;
-      this.results = [];
-      this.errors = {};
-    },
-    async handleDone() {
+
+    async updatePaymentStatus(person) {
+      if (!this.orderId) return;
+
       try {
-        await axios.post('/api/history', {
-          orders: this.results,
-          subtotal: this.subtotal,
-          deliveryFee: this.deliveryFee || 0,
-          totalDiscount: this.discount || 0
+        const response = await axios.patch(`/api/calculate/${this.orderId}/payment`, {
+          personName: person.name,
+          isPaid: person.paid
         });
-        
-        this.showSuccessMessage = true;
-        // Emit event to notify parent that history should be refreshed
-        this.$emit('history-updated');
-        
-        setTimeout(() => {
-          this.showSuccessMessage = false;
-          this.clearForm();
-        }, 2000);
+
+        // Update the totals
+        this.results.totalPaid = response.data.data.totalPaid;
+        this.results.remainingAmount = response.data.data.remainingAmount;
       } catch (error) {
-        console.error('Error saving to history:', error);
+        this.error = error.response?.data?.error || 'Failed to update payment status';
+        // Revert the checkbox if the update failed
+        person.paid = !person.paid;
       }
+    },
+
+    resetForm() {
+      this.people = [{ name: '', amount: null, displayAmount: '' }];
+      this.deliveryFee = 0;
+      this.displayDeliveryFee = '';
+      this.discount = 0;
+      this.displayDiscount = '';
+      this.results = null;
+      this.error = null;
+      this.orderId = null;
+    },
+
+    async saveToHistory() {
+      // The order is already saved when calculated
+      this.resetForm();
     }
   }
 };
 </script>
 
 <style>
-.form-container {
-  background-color: var(--form-bg, #f8f9fa);
+.payment-form {
+  background: var(--form-bg, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
+  max-width: 800px;
   margin: 0 auto;
+  width: 100%;
 }
-.form-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 20px;
-  text-align: center;
-  color: #007bff; /* Use a distinct color for visibility in both light and dark modes */
-}
-.form {
+
+.people-inputs {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
 }
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px;
-  width: 100%;
+
+.person-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  background: var(--header-bg, #f8f9fa);
+  padding: 1rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
-.input {
-  flex: 1;
-  padding: 10px;
+
+.person-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.name-input,
+.amount-input,
+.fee-input,
+.discount-input {
+  padding: 0.75rem;
   border: 1px solid var(--border-color, #ced4da);
-  border-radius: 5px;
-  background-color: var(--input-bg, #fff);
+  border-radius: 6px;
+  font-size: 1rem;
+  width: 100%;
+  transition: border-color 0.2s ease;
+  background: var(--form-bg, #ffffff);
   color: inherit;
 }
-.button {
-  padding: 10px 15px;
+
+.name-input:focus,
+.amount-input:focus,
+.fee-input:focus,
+.discount-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.remove-button {
+  padding: 0.75rem;
+  background: #dc3545;
+  color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-.button-remove {
-  background-color: #dc3545;
-  color: white;
+  transition: background-color 0.2s ease;
+  min-width: 40px;
   height: 40px;
-  margin-top: 2px; /* Align with input field */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.button-remove:hover {
-  background-color: #c82333;
+
+.remove-button:hover {
+  background: #c82333;
 }
-.button-add {
-  background-color: #28a745;
+
+.add-button {
+  padding: 0.75rem 1.5rem;
+  background: #28a745;
   color: white;
-  height: 40px;
-  margin-top: 2px; /* Align with input field */
-}
-.button-add:hover {
-  background-color: #218838;
-}
-.button-submit {
-  background-color: #007bff;
-  color: white;
-  width: 100%;
-}
-.button-submit:hover {
-  background-color: #0056b3;
-}
-.results {
-  margin-top: 20px;
-  color: inherit; /* Inherit color from parent to support dark mode */
-  overflow-x: auto; /* Enable horizontal scrolling */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  margin-top: 0.5rem;
+  align-self: flex-end;
 }
 
-.results p {
-  color: inherit; /* Ensure result text inherits color */
-  margin: 8px 0;
+.add-button:hover {
+  background: #218838;
+  transform: translateY(-1px);
 }
 
-.results-title {
-  font-size: 1.25rem;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #007bff; /* Use consistent blue color for titles */
-}
-
-.results-table {
-  width: 100%;
-  min-width: 600px; /* Ensure table doesn't get too narrow */
-  border-collapse: collapse;
-  margin-top: 10px;
-  background-color: var(--table-bg, #fff); /* Use CSS variable for background */
-}
-
-.results-table th,
-.results-table td {
-  border: 1px solid var(--border-color, #dee2e6);
-  padding: 10px;
-  text-align: left;
-  color: inherit; /* Ensure table text inherits color */
-}
-
-.results-table th {
-  background-color: var(--header-bg, #e9ecef);
-}
-
-/* Dark mode styles */
-.dark .results-table {
-  --table-bg: #2d3748;
-  --border-color: #4a5568;
-  --header-bg: #1a202c;
-}
-
-.dark .highlight {
-  background-color: #2f4f2f; /* Darker green for dark mode */
-}
-
-.highlight {
-  background-color: #d4edda;
+.additional-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-bottom: 2rem;
+  background: var(--header-bg, #f8f9fa);
+  padding: 1.5rem;
+  border-radius: 6px;
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-width: 200px; /* Ensure inputs don't get too narrow */
+  gap: 0.5rem;
 }
 
-.error {
-  border-color: #dc3545 !important;
+.input-group label {
+  font-weight: 500;
+  color: inherit;
+}
+
+.calculate-button {
+  width: 100%;
+  padding: 1rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.calculate-button:hover:not(:disabled) {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.calculate-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.results {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: var(--form-bg, #f8f9fa);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.results-header {
+  margin-bottom: 1.5rem;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.total-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: var(--total-bg, #fff);
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.total-paid {
+  color: #28a745;
+}
+
+.remaining {
+  color: #dc3545;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.results-table th,
+.results-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border: 1px solid var(--border-color, #dee2e6);
+}
+
+.results-table th {
+  background: var(--header-bg, #e9ecef);
+}
+
+.highlight td {
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.paid td {
+  background-color: rgba(40, 167, 69, 0.05);
+}
+
+.payment-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.payment-status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+input[type="checkbox"]:checked + .payment-status {
+  background-color: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+}
+
+input[type="checkbox"]:not(:checked) + .payment-status {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.save-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.save-button,
+.reset-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.save-button {
+  background: #28a745;
+  color: white;
+}
+
+.reset-button {
+  background: #6c757d;
+  color: white;
 }
 
 .error-message {
-  color: #dc3545;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f8d7da;
+  color: #721c24;
+  border-radius: 4px;
 }
 
-/* Dark mode styles */
-.dark .form-container {
-  --form-bg: #1a202c;
-  --border-color: #4a5568;
+.dark .results {
+  background-color: #2d3748;
+  color: #f8f9fa;
 }
 
-.dark .input {
-  --input-bg: #2d3748;
-  --border-color: #4a5568;
+.dark .total-item {
+  background-color: #1a202c;
 }
 
-/* Media query for mobile devices */
+.dark input[type="text"],
+.dark input[type="number"] {
+  background-color: #2d3748;
+  color: #f8f9fa;
+  border-color: #4a5568;
+}
+
+.dark .results-table th {
+  background-color: #1a202c;
+}
+
+.dark .results-table td {
+  border-color: #4a5568;
+}
+
 @media (max-width: 768px) {
-  .form-container {
+  .payment-form {
     padding: 1rem;
   }
 
-  .form-row {
-    flex-direction: column;
+  .person-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
 
-  .input-group {
+  .additional-inputs {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .add-button,
+  .calculate-button {
     width: 100%;
+    margin-top: 0.75rem;
   }
-
-  .button-remove, .button-add {
-    width: 100%;
-    margin-top: 10px;
-  }
-}
-
-.button-group {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.button-clear {
-  background-color: #6c757d;
-  color: white;
-  flex: 1;
-}
-
-.button-clear:hover {
-  background-color: #5a6268;
-}
-
-.button-submit {
-  background-color: #007bff;
-  color: white;
-  flex: 2;
-}
-
-.button-submit:hover {
-  background-color: #0056b3;
-}
-
-.mt-4 {
-  margin-top: 1rem;
-}
-
-.button-done {
-  background-color: #28a745;
-  color: white;
-  width: 100%;
-  padding: 0.75rem;
-  font-size: 1.1rem;
-}
-
-.button-done:hover {
-  background-color: #218838;
-}
-
-.success-message {
-  background-color: #28a745;
-  color: white;
-  padding: 10px;
-  border-radius: 5px;
-  text-align: center;
-  margin-top: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-group .input-group {
-  width: 100%;
 }
 </style>

@@ -87,6 +87,8 @@
               <th>{{ t('deliveryFee') }}</th>
               <th>{{ t('discount') }}</th>
               <th>{{ t('finalTotal') }}</th>
+              <th>{{ t('totalPaid') }}</th>
+              <th>{{ t('remainingAmount') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -96,6 +98,9 @@
                 <ul class="order-people">
                   <li v-for="person in order.orders" :key="person.name">
                     {{ person.name }}: {{ formatCurrency(person.finalOwed) }}
+                    <span :class="['payment-badge', person.paid ? 'paid' : 'unpaid']">
+                      {{ t(person.paid ? 'paid' : 'unpaid') }}
+                    </span>
                   </li>
                 </ul>
               </td>
@@ -103,6 +108,8 @@
               <td>{{ formatCurrency(order.deliveryFee) }}</td>
               <td>{{ formatCurrency(order.totalDiscount) }}</td>
               <td>{{ formatCurrency(calculateFinalTotal(order)) }}</td>
+              <td>{{ formatCurrency(getTotalPaid(order)) }}</td>
+              <td>{{ formatCurrency(getRemainingAmount(order)) }}</td>
             </tr>
           </tbody>
         </table>
@@ -214,6 +221,14 @@ export default {
     calculateFinalTotal(order) {
       return order.orders.reduce((sum, person) => sum + person.finalOwed, 0);
     },
+    getTotalPaid(order) {
+      return order.orders.reduce((sum, person) => 
+        sum + (person.paid ? person.finalOwed : 0), 0);
+    },
+    getRemainingAmount(order) {
+      const total = order.orders.reduce((sum, person) => sum + person.finalOwed, 0);
+      return total - this.getTotalPaid(order);
+    },
     handleNameInput(event) {
       this.filters.name = event.target.value;
       this.fetchHistory();
@@ -283,302 +298,286 @@ export default {
 </script>
 
 <style>
-.filters {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  align-items: flex-end;
-}
-
-.input-group {
-  position: relative;
-}
-
-.input-label {
-  font-size: 0.875rem;
-  color: inherit;
-  margin-bottom: 0.25rem;
-  display: block;
-}
-
-.order-people {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.page-info {
-  color: inherit;
-}
-
-.no-results {
-  text-align: center;
-  padding: 2rem;
-  color: inherit;
-}
-
-.clear-history {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.confirm-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem;
-  border: 1px solid var(--border-color, #dee2e6);
-  border-radius: 5px;
-  background-color: var(--form-bg, #f8f9fa);
-}
-
-.confirm-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.button-danger {
-  background-color: #dc3545;
-  color: white;
-}
-
-.button-danger:hover {
-  background-color: #c82333;
-}
-
-.button-danger:disabled {
-  background-color: #dc354580;
-  cursor: not-allowed;
-}
-
-.button-secondary {
-  background-color: #6c757d;
-  color: white;
-}
-
-.button-secondary:hover {
-  background-color: #5a6268;
-}
-
-/* Responsive styles */
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-  }
-  
-  .order-people {
-    font-size: 0.9rem;
-  }
-}
-
-.success-message {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #28a745;
-  color: white;
-  padding: 1rem;
-  border-radius: 5px;
-  animation: fadeIn 0.3s ease-in;
-  z-index: 100;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: var(--form-bg, #f8f9fa);
-  padding: 2rem;
+.form-container {
+  background: var(--form-bg, #ffffff);
   border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.modal-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  color: #dc3545;
-}
-
-.modal-text {
-  color: inherit;
-  margin-bottom: 1rem;
-}
-
-.modal-body {
-  margin-bottom: 1.5rem;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-/* Dark mode styles */
-.dark .modal-content {
-  --form-bg: #1a202c;
-  border: 1px solid #4a5568;
-}
-
-@keyframes modalFadeIn {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.modal-content {
-  animation: modalFadeIn 0.3s ease-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  width: 100%;
 }
 
 .header-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  gap: 1rem;
 }
 
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
+.form-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  color: inherit;
+}
+
+.button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.button-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.button-danger:hover {
+  background: #c82333;
+}
+
+.button-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.button-secondary:hover {
+  background: #5a6268;
 }
 
 .filter-toggle {
+  width: 100%;
   display: none;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
   margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
-  background-color: var(--form-bg, #f8f9fa);
-  border: 1px solid var(--border-color, #dee2e6);
-  border-radius: 5px;
-  font-weight: 500;
-}
-
-.filter-toggle .icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  transition: transform 0.3s ease;
-}
-
-.filter-toggle .icon.rotated {
-  transform: rotate(180deg);
+  background: var(--header-bg, #f8f9fa);
 }
 
 .filters-wrapper {
-  transition: max-height 0.3s ease-in-out;
-  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: var(--header-bg, #f8f9fa);
+  border-radius: 6px;
+  align-items: start;
 }
 
 .dates-group {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  flex: 2;
 }
 
 .sort-group {
   display: flex;
+  flex-direction: column;
   gap: 1rem;
-  flex: 1;
 }
 
-.table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-top: 1rem;
+.sort-group select {
+  width: 100%;
 }
 
-.clear-history-wrapper {
+.input-group {
   display: flex;
-  justify-content: flex-end;
-  margin: 1rem 0;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-/* Mobile Styles */
+.input {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color, #ced4da);
+  border-radius: 6px;
+  font-size: 1rem;
+  width: 100%;
+  background: var(--form-bg, #ffffff);
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.input-label {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: inherit;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  background: var(--form-bg, #ffffff);
+}
+
+.results-table th,
+.results-table td {
+  padding: 1rem;
+  text-align: left;
+  border: 1px solid var(--border-color, #dee2e6);
+}
+
+.results-table th {
+  background: var(--header-bg, #f8f9fa);
+  font-weight: 600;
+}
+
+.results-table tr:hover {
+  background: var(--header-bg, #f8f9fa);
+}
+
+.order-people {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.order-people li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: var(--header-bg, #f8f9fa);
+  border-radius: 4px;
+}
+
+.payment-badge {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.payment-badge.paid {
+  background: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+}
+
+.payment-badge.unpaid {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: var(--header-bg, #f8f9fa);
+  border-radius: 6px;
+}
+
+.page-info {
+  font-weight: 500;
+}
+
+.success-message {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #28a745;
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease-out;
+  z-index: 1000;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--form-bg, #ffffff);
+  border-radius: 8px;
+  padding: 2rem;
+}
+
+.modal-title {
+  color: #dc3545;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.modal-text {
+  margin: 1rem 0;
+  color: inherit;
+}
+
 @media (max-width: 768px) {
+  .form-container {
+    padding: 1rem;
+  }
+
   .filter-toggle {
     display: flex;
   }
 
   .filters-wrapper {
     max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
   }
 
   .filters-wrapper.expanded {
-    max-height: 500px;
+    max-height: 1000px;
   }
 
   .filters {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 1rem;
     padding: 1rem;
-    background-color: var(--form-bg, #f8f9fa);
-    border: 1px solid var(--border-color, #dee2e6);
-    border-radius: 5px;
   }
 
   .dates-group {
-    flex-direction: column;
-  }
-
-  .sort-group {
-    flex-direction: column;
-  }
-
-  .input-group {
-    width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .results-table {
     font-size: 0.875rem;
   }
 
-  .header-actions {
-    gap: 0.5rem;
+  .results-table th,
+  .results-table td {
+    padding: 0.75rem;
   }
-  
-  .header-actions .button {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+
+  .pagination {
+    flex-direction: column;
+    gap: 0.75rem;
   }
-}
 
-/* Dark mode adjustments */
-.dark .filters {
-  background-color: var(--form-bg, #1a202c);
-  border-color: var(--border-color, #4a5568);
-}
-
-.dark .filter-toggle {
-  background-color: var(--form-bg, #1a202c);
-  border-color: var(--border-color, #4a5568);
+  .success-message {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    text-align: center;
+  }
 }
 </style>

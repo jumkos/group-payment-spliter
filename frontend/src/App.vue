@@ -102,7 +102,7 @@ export default {
 }
 
 .app-container {
-  font-family: Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #333;
   background-color: #f8f9fa;
   min-height: 100vh;
@@ -112,7 +112,7 @@ export default {
 }
 
 .app-container.dark {
-  background-color: #333;
+  background-color: #1a202c;
   color: #f8f9fa;
 }
 
@@ -126,6 +126,13 @@ export default {
   position: sticky;
   top: 0;
   z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .app-header .toggle-mode {
@@ -159,6 +166,12 @@ main {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .header-controls {
@@ -170,22 +183,49 @@ main {
 .lang-select {
   padding: 0.5rem;
   border-radius: 5px;
-  background-color: transparent;
+  background-color: rgba(255, 255, 255, 0.1);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.lang-select:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .lang-select option {
   background-color: #007bff;
   color: white;
+  padding: 0.5rem;
 }
 
 .dark .lang-select option {
-  background-color: #1a202c;
+  background-color: #2d3748;
 }
 
+:root {
+  --border-color: #dee2e6;
+  --form-bg: #ffffff;
+  --header-bg: #f8f9fa;
+}
+
+.dark {
+  --border-color: #4a5568;
+  --form-bg: #2d3748;
+  --header-bg: #1a202c;
+}
+
+/* Responsive styles */
 @media (max-width: 768px) {
+  .app-header {
+    padding: 1rem;
+  }
+
+  main {
+    padding: 1rem;
+  }
+
   .header-controls {
     gap: 0.5rem;
   }
@@ -193,6 +233,10 @@ main {
   .lang-select {
     font-size: 0.875rem;
     padding: 0.4rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.25rem;
   }
 }
 </style>

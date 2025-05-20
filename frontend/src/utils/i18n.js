@@ -11,6 +11,7 @@ export const translations = {
     clear: 'Clear',
     calculate: 'Calculate',
     done: 'Done',
+    save: 'Save',
 
     // Validation Messages
     nameRequired: 'Name is required',
@@ -18,10 +19,9 @@ export const translations = {
     amountPositive: 'Amount must be greater than 0',
     deliveryFeeNegative: 'Delivery fee cannot be negative',
     discountNegative: 'Discount cannot be negative',
-    discountTooLarge: 'Discount cannot be greater than subtotal',
-
-    // Results
+    discountTooLarge: 'Discount cannot be greater than subtotal',    // Results
     results: 'Results',
+    summary: 'Summary',
     subtotal: 'Subtotal',
     finalTotal: 'Final Total',
     totalDelivery: 'Total to Delivery Service',
@@ -51,7 +51,14 @@ export const translations = {
 
     // Success Messages
     savedSuccess: 'Calculation saved successfully!',
-    clearedSuccess: 'History cleared successfully!'
+    clearedSuccess: 'History cleared successfully!',
+
+    // Payment Status
+    paid: 'Paid',
+    unpaid: 'Unpaid',
+    totalPaid: 'Total Paid',
+    remainingAmount: 'Remaining Amount',
+    paymentStatus: 'Payment Status'
   },
   id: {
     // Form
@@ -65,6 +72,7 @@ export const translations = {
     clear: 'Bersihkan',
     calculate: 'Hitung',
     done: 'Selesai',
+    save: 'Simpan',
 
     // Validation Messages
     nameRequired: 'Nama wajib diisi',
@@ -72,10 +80,9 @@ export const translations = {
     amountPositive: 'Harga harus lebih dari 0',
     deliveryFeeNegative: 'Biaya antar tidak boleh negatif',
     discountNegative: 'Diskon tidak boleh negatif',
-    discountTooLarge: 'Diskon tidak boleh lebih besar dari subtotal',
-
-    // Results
+    discountTooLarge: 'Diskon tidak boleh lebih besar dari subtotal',    // Results
     results: 'Hasil',
+    summary: 'Ringkasan',
     subtotal: 'Subtotal',
     finalTotal: 'Total Akhir',
     totalDelivery: 'Total Biaya Antar',
@@ -105,6 +112,13 @@ export const translations = {
 
     // Success Messages
     savedSuccess: 'Perhitungan berhasil disimpan!',
-    clearedSuccess: 'Riwayat berhasil dihapus!'
+    clearedSuccess: 'Riwayat berhasil dihapus!',
+
+    // Payment Status
+    paid: 'Lunas',
+    unpaid: 'Belum Lunas',
+    totalPaid: 'Total Dibayar',
+    remainingAmount: 'Sisa Pembayaran',
+    paymentStatus: 'Status Pembayaran'
   }
 };

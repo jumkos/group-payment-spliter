@@ -1,59 +1,95 @@
 const express = require('express');
 const router = express.Router();
+const Order = require('../models/Order');
 
-const roundUpToNearest100 = (value) => Math.ceil(value / 100) * 100;
+// Helper function to round to nearest 100
+const roundTo100 = (num) => Math.round(num / 100) * 100;
 
-// POST /api/calculate
-router.post('/', (req, res) => {
-  const { people, deliveryFee, discount } = req.body;
+router.post('/', async (req, res) => {
+  try {
+    const { orders, deliveryFee = 0, totalDiscount = 0 } = req.body;
+    
+    // Calculate subtotal before discount
+    const subtotal = orders.reduce((sum, order) => sum + order.amount, 0);
+    
+    // Calculate each person's share of the discount proportionally
+    const processedOrders = orders.map(order => {
+      const discountShare = roundTo100((order.amount / subtotal) * totalDiscount);
+      const deliveryShare = roundTo100(deliveryFee / orders.length);
+      const finalOwed = roundTo100(order.amount - discountShare + deliveryShare);
+      
+      return {
+        name: order.name,
+        amount: order.amount,
+        discountShare,
+        finalOwed,
+        paid: false
+      };
+    });
 
-  if (!people || !Array.isArray(people) || people.length === 0) {
-    return res.status(400).json({ error: 'Invalid people data' });
+    // Create new order record
+    const order = new Order({
+      orders: processedOrders,
+      deliveryFee,
+      totalDiscount,
+      subtotal
+    });
+
+    await order.save();
+
+    // Return the processed order details
+    res.json({
+      success: true,
+      data: {
+        id: order._id,
+        orders: processedOrders,
+        deliveryFee,
+        totalDiscount,
+        subtotal,
+        totalPaid: order.getTotalPaid(),
+        remainingAmount: order.getRemainingAmount()
+      }
+    });
+  } catch (error) {
+    console.error('Calculate error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process order calculation'
+    });
   }
+});
 
-  const subtotal = people.reduce((sum, person) => sum + person.amount, 0);
-  if (subtotal === 0) {
-    return res.status(400).json({ error: 'Subtotal cannot be zero' });
+// Update payment status
+router.patch('/:orderId/payment', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { personName, isPaid } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    order.updatePaymentStatus(personName, isPaid);
+    await order.save();
+
+    res.json({
+      success: true,
+      data: {
+        totalPaid: order.getTotalPaid(),
+        remainingAmount: order.getRemainingAmount()
+      }
+    });
+  } catch (error) {
+    console.error('Payment update error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update payment status'
+    });
   }
-
-  const totalPeople = people.length;
-  const results = people.map(person => {
-    const discountShare = (person.amount / subtotal) * discount;
-    const deliveryShare = deliveryFee / totalPeople;
-    const finalOwed = roundUpToNearest100(person.amount - discountShare + deliveryShare);
-
-    return {
-      name: person.name,
-      amount: person.amount,
-      discountShare: roundUpToNearest100(discountShare),
-      finalOwed
-    };
-  });
-
-  const totalBefore = subtotal + deliveryFee;
-  let totalAfter = results.reduce((sum, person) => sum + person.finalOwed, 0);
-  const totalToDeliveryService = subtotal + deliveryFee - discount;
-
-  // Adjust discount shares to ensure Total After does not exceed Total to Delivery Service
-  let adjustmentNeeded = totalAfter - totalToDeliveryService;
-  while (adjustmentNeeded > 0) {
-    const randomIndex = Math.floor(Math.random() * results.length);
-    const person = results[randomIndex];
-    const adjustment = Math.min(adjustmentNeeded, 100); // Adjust by Rp100 increments
-
-    person.discountShare += adjustment;
-    person.finalOwed -= adjustment;
-    adjustmentNeeded -= adjustment;
-  }
-
-  totalAfter = results.reduce((sum, person) => sum + person.finalOwed, 0);
-
-  res.json({
-    totalBefore,
-    totalAfter,
-    totalToDeliveryService,
-    results
-  });
 });
 
 module.exports = router;
