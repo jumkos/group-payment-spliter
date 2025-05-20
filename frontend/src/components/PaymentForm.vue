@@ -16,15 +16,17 @@
             required
             class="amount-input"
             @input="handleAmountInput($event, index)"
-          />
-          <button 
-            type="button" 
+          />          <button 
+            v-if="people.length > 1"
+            type="button"
             @click="removePerson(index)"
             class="remove-button"
             :aria-label="t('remove')"
           >
             ✕
           </button>
+          <!-- Add empty div for consistent spacing when button is hidden -->
+          <div v-else class="remove-button-placeholder"></div>
         </div>
         <button type="button" @click="addPerson" class="add-button">
           {{ t('addPerson') }}
@@ -393,6 +395,11 @@ export default {
 
 .remove-button:hover {
   background: #c82333;
+}
+
+.remove-button-placeholder {
+  min-width: 40px;
+  height: 40px;
 }
 
 .add-button {
